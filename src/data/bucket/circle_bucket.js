@@ -205,19 +205,76 @@ class CircleBucket<Layer: CircleStyleLayer | HeatmapStyleLayer> implements Bucke
                 // │ 3     2 │
                 // │         │
                 // │ 0     1 │
-                // └─────────┘
+                // └─────────
 
                 if (projection) {
-                    const projectedPoint = projection.projectTilePoint(x, y, canonical);
+                    const projectedPoint = projection.projectTilePoint(
+                        x,
+                        y,
+                        canonical
+                    );
                     const normal = projection.upVector(canonical, x, y);
+
+                    // Apply extra scaling to cover different pixelPerMeter ratios at different latitudes
+                    // scale = projection.ppm(lat) / mercator.ppm(lat)
+                    const lat = latFromMercatorY(
+                        (y / EXTENT + canonical.y) / (1 << canonical.z)
+                    )
+                    const scale =
+                        projection.pixelsPerMeter(lat, 1) /
+                        mercatorZfromAltitude(1, lat);
                     const array: any = this.globeExtVertexArray;
 
-                    addGlobeExtVertex(array, projectedPoint, normal);
-                    addGlobeExtVertex(array, projectedPoint, normal);
-                    addGlobeExtVertex(array, projectedPoint, normal);
-                    addGlobeExtVertex(array, projectedPoint, normal);
+                    addGlobeExtVertex(array, projectedPoint, normal, scale)
+                    addGlobeExtVertex(array, projectedPoint, normal, scale)
+                    addGlobeExtVertex(array, projectedPoint, normal, scale)
+                    addGlobeExtVertex(array, projectedPoint, normal, scale)
                 }
-                const segment = this.segments.prepareSegment(4, this.layoutVertexArray, this.indexArray, feature.sortKey);
+
+                // Defaults for the circle marker
+                let segments = 4
+                let primitives = 2
+
+                switch (feature.properties.shape) {
+                    case "invTriangle":
+                        segments += 3
+                        primitives += 1
+                        break
+
+                    case "triangle":
+                        segments += 3
+                        primitives += 1
+                        break
+
+                    case "star":
+                        segments += 8
+                        primitives += 3
+                        break
+
+                    case "square":
+                        segments += 4
+                        primitives += 2
+                        break
+
+                    case "diamond":
+                        segments += 4
+                        primitives += 2
+                        break
+
+                    case "circle":
+                        segments += 13
+                        primitives += 12
+                        break
+                    default:
+                        break
+                }
+
+                const segment = this.segments.prepareSegment(
+                    segments,
+                    this.layoutVertexArray,
+                    this.indexArray,
+                    feature.sortKey
+                );
                 const index = segment.vertexLength;
 
                 addCircleVertex(this.layoutVertexArray, x, y, -1, -1);
@@ -226,14 +283,203 @@ class CircleBucket<Layer: CircleStyleLayer | HeatmapStyleLayer> implements Bucke
                 addCircleVertex(this.layoutVertexArray, x, y, -1, 1);
 
                 this.indexArray.emplaceBack(index, index + 1, index + 2);
-                this.indexArray.emplaceBack(index, index + 2, index + 3);
+                this.indexArray.emplaceBack(index, index + 3, index + 2)
 
-                segment.vertexLength += 4;
-                segment.primitiveLength += 2;
+                if (feature.properties.shape === "invTriangle") {
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.5, -0.3)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.5, -0.3)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, 0.5)
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 5,
+                        index + 6
+                    )
+                }
+
+                if (feature.properties.shape === "star") {
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, 0.3)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.6, -0.2)
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.6, -0.2)
+
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, -0.7)
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.4, 0.6)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.2, 0.1)
+
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.4, 0.6)
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.2, 0.1)
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 5,
+                        index + 6
+                    )
+                    this.indexArray.emplaceBack(
+                        index + 7,
+                        index + 8,
+                        index + 9
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 10,
+                        index + 11,
+                        index + 7
+                    )
+                }
+
+                if (feature.properties.shape === "square") {
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.4, -0.4)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.4, -0.4)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.4, 0.4)
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.4, 0.4)
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 5,
+                        index + 6
+                    )
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 6,
+                        index + 7
+                    )
+                }
+
+                if (feature.properties.shape === "triangle") {
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, -0.5)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.5, 0.3)
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.5, 0.3)
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 5,
+                        index + 6
+                    )
+                }
+
+                if (feature.properties.shape === "diamond") {
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.4, 0)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, 0.5)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.4, 0)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, -0.5)
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 5,
+                        index + 6
+                    )
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 6,
+                        index + 7
+                    )
+                }
+
+                if (feature.properties.shape === "circle") {
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, 0)
+
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.47, 0)
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.4, 0.3)
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.3, 0.4)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, 0.47)
+
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.3, 0.4)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.4, 0.3)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.47, 0)
+
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.4, -0.3)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0.3, -0.4)
+                    addCircleVertex(this.layoutVertexArray, x, y, 0, -0.47)
+
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.3, -0.4)
+                    addCircleVertex(this.layoutVertexArray, x, y, -0.4, -0.3)
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 5,
+                        index + 6
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 6,
+                        index + 7
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 7,
+                        index + 8
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 8,
+                        index + 9
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 9,
+                        index + 10
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 10,
+                        index + 11
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 11,
+                        index + 12
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 12,
+                        index + 13
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 13,
+                        index + 14
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 14,
+                        index + 15
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 15,
+                        index + 16
+                    )
+
+                    this.indexArray.emplaceBack(
+                        index + 4,
+                        index + 16,
+                        index + 5
+                    )
+                }
+
+                segment.vertexLength += segments
+                segment.primitiveLength += primitives;
             }
         }
 
-        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, {}, availableImages, canonical);
+    this.programConfigurations.populatePaintArrays(
+        this.layoutVertexArray.length,
+        feature,
+        index,
+        {},
+        availableImages,
+        canonical
+    );
     }
 }
 

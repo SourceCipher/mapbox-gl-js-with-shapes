@@ -50,6 +50,25 @@ function packColor(color: Color): [number, number] {
     ];
 }
 
+function hexToRgba(hexCode) {
+    let hex = hexCode.replace("#", "")
+
+    if (hex.length === 3) {
+        hex = `${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`
+    }
+
+    const r = parseInt(hex.substring(0, 2), 16)
+    const g = parseInt(hex.substring(2, 4), 16)
+    const b = parseInt(hex.substring(4, 6), 16)
+
+    return {
+        r: r / 255,
+        g: g / 255,
+        b: b / 255,
+        a: 1,
+    }
+}
+
 /**
  *  `Binder` is the interface definition for the strategies for constructing,
  *  uploading, and binding paint property data as GLSL attributes. Most style-
@@ -170,19 +189,36 @@ class SourceExpressionBinder implements AttributeBinder {
         assert(Array.isArray(availableImages));
         const value = this.expression.evaluate(new EvaluationParameters(0), feature, {}, canonical, availableImages, formattedSection);
         this.paintVertexArray.resize(newLength);
-        this._setPaintValue(start, newLength, value);
+        this._setPaintValue(start, newLength, value, feature);
     }
 
     updatePaintArray(start: number, end: number, feature: Feature, featureState: FeatureState, availableImages: Array<string>) {
         const value = this.expression.evaluate({zoom: 0}, feature, featureState, undefined, availableImages);
-        this._setPaintValue(start, end, value);
+        this._setPaintValue(start, end, value, feature);
     }
 
-    _setPaintValue(start, end, value) {
-        if (this.type === 'color') {
+    _setPaintValue(start, end, value, feature) {
+        if (this.type === "color") {
             const color = packColor(value);
+
+            let shapeColor = "#ffffff"
+            let rgbaShape = []
+
+            if (feature.properties.shape && feature.properties.shapeColor) {
+                shapeColor = feature.properties.shapeColor
+                rgbaShape = packColor(hexToRgba(shapeColor))
+            }
+
             for (let i = start; i < end; i++) {
-                this.paintVertexArray.emplace(i, color[0], color[1]);
+                if (feature.properties.shape && i - start > 3) {
+                    this.paintVertexArray.emplace(
+                        i,
+                        rgbaShape[0],
+                        rgbaShape[1]
+                    )
+                } else {
+                    this.paintVertexArray.emplace(i, color[0], color[1]);
+                }
             }
         } else {
             for (let i = start; i < end; i++) {

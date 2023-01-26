@@ -1221,7 +1221,7 @@ export {
     StructArrayLayout2i4 as PosArray,
     StructArrayLayout3i6 as PosGlobeExtArray,
     StructArrayLayout4i8 as RasterBoundsArray,
-    StructArrayLayout2i4 as CircleLayoutArray,
+    StructArrayLayout2f8 as CircleLayoutArray,
     StructArrayLayout2i4 as FillLayoutArray,
     StructArrayLayout4i8 as FillExtrusionLayoutArray,
     StructArrayLayout2i4 as HeatmapLayoutArray,
@@ -1246,5 +1246,5 @@ export {
     StructArrayLayout1ui2 as LineStripIndexArray,
     StructArrayLayout3f12 as SkyboxVertexArray,
     StructArrayLayout4i8 as TileBoundsArray,
-    StructArrayLayout6i12 as CircleGlobeExtArray
+    StructArrayLayout6i12 as CircleGlobeExtArray,
 };
