@@ -6,7 +6,7 @@ This branch will have everything what the mapbox has but extended to show some s
 
 ## USAGE
 
-Just add the `shape` and `shapeColor` properties for each of your marker nad you are ready to rock.
+Just add the `shape` and `shapeColor` properties for each of your marker and you are ready to rock.
 
 For example: 
 
