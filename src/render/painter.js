@@ -14,7 +14,6 @@ import {isMapAuthenticated} from '../util/mapbox.js';
 import posAttributes from '../data/pos_attributes.js';
 import boundsAttributes from '../data/bounds_attributes.js';
 import ProgramConfiguration from '../data/program_configuration.js';
-import CrossTileSymbolIndex from '../symbol/cross_tile_symbol_index.js';
 import shaders from '../shaders/shaders.js';
 import Program from './program.js';
 import {programUniforms} from './program/program_uniforms.js';
@@ -147,7 +146,6 @@ class Painter {
     id: string;
     _showOverdrawInspector: boolean;
     cache: {[_: string]: Program<*> };
-    crossTileSymbolIndex: CrossTileSymbolIndex;
     symbolFadeChange: number;
     gpuTimers: GPUTimers;
     deferredRenderGpuTimeQueries: Array<any>;
@@ -176,8 +174,6 @@ class Painter {
         // This is implemented using the WebGL depth buffer.
         this.numSublayers = SourceCache.maxUnderzooming + SourceCache.maxOverzooming + 1;
         this.depthEpsilon = 1 / Math.pow(2, 16);
-
-        this.crossTileSymbolIndex = new CrossTileSymbolIndex();
 
         this.deferredRenderGpuTimeQueries = [];
         this.gpuTimers = {};
@@ -554,8 +550,9 @@ class Painter {
         // Terrain depth offscreen render pass ==========================
         // With terrain on, renders the depth buffer into a texture.
         // This texture is used for occlusion testing (labels)
-        if (this.terrain && (this.style.hasSymbolLayers() || this.style.hasCircleLayers())) {
-            this.terrain.drawDepth();
+        const terrain = this.terrain;
+        if (terrain && (this.style.hasSymbolLayers() || this.style.hasCircleLayers())) {
+            terrain.drawDepth();
         }
 
         // Rebind the main framebuffer now that all offscreen layers have been rendered:

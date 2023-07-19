@@ -104,7 +104,7 @@ function getTouchById(mapTouches: Array<Touch>, points: Array<Point>, identifier
 
 const ZOOM_THRESHOLD = 0.1;
 
-function getZoomDelta(distance, lastDistance) {
+function getZoomDelta(distance: number, lastDistance: number) {
     return Math.log(distance / lastDistance) / Math.LN2;
 }
 
@@ -139,7 +139,7 @@ export class TouchZoomHandler extends TwoTouchHandler {
 
 const ROTATION_THRESHOLD = 25; // pixels along circumference of touch circle
 
-function getBearingDelta(a, b) {
+function getBearingDelta(a: Point, b: Point) {
     return a.angleWith(b) * 180 / Math.PI;
 }
 
@@ -166,6 +166,7 @@ export class TouchRotateHandler extends TwoTouchHandler {
         this._active = true;
 
         return {
+            // $FlowFixMe[incompatible-call] - Flow doesn't infer that this._vectoris not null
             bearingDelta: getBearingDelta(this._vector, lastVector),
             pinchAround
         };
@@ -196,7 +197,7 @@ export class TouchRotateHandler extends TwoTouchHandler {
 
 /* PITCH */
 
-function isVertical(vector) {
+function isVertical(vector: Point) {
     return Math.abs(vector.y) > Math.abs(vector.x);
 }
 

@@ -37,7 +37,7 @@ class Match implements Expression {
             return context.error(`Expected an even number of arguments.`);
 
         let inputType;
-        let outputType;
+        let outputType: ?Type;
         if (context.expectedType && context.expectedType.kind !== 'value') {
             outputType = context.expectedType;
         }
@@ -138,7 +138,7 @@ class Match implements Expression {
             }
         }
 
-        const coerceLabel = (label) => this.inputType.kind === 'number' ? Number(label) : label;
+        const coerceLabel = (label: number | string) => this.inputType.kind === 'number' ? Number(label) : label;
 
         for (const [outputIndex, labels] of groupedByOutput) {
             if (labels.length === 1) {

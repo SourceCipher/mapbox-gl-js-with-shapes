@@ -125,7 +125,9 @@ class ConstantBinder implements UniformBinder {
         uniform.set(program, uniformName, currentValue.constantOr(this.value));
     }
 
+    // $FlowFixMe[method-unbinding]
     getBinding(context: Context, _: string): $Shape<Uniform<any>> {
+        // $FlowFixMe[method-unbinding]
         return (this.type === 'color') ?
             new UniformColor(context) :
             new Uniform1f(context);
@@ -155,7 +157,9 @@ class PatternConstantBinder implements UniformBinder {
         if (pos) uniform.set(program, uniformName, pos);
     }
 
+    // $FlowFixMe[method-unbinding]
     getBinding(context: Context, name: string): $Shape<Uniform<any>> {
+        // $FlowFixMe[method-unbinding]
         return name === 'u_pattern' || name === 'u_dash' ?
             new Uniform4f(context) :
             new Uniform1f(context);
@@ -187,6 +191,7 @@ class SourceExpressionBinder implements AttributeBinder {
     populatePaintArray(newLength: number, feature: Feature, imagePositions: SpritePositions, availableImages: Array<string>, canonical?: CanonicalTileID, formattedSection?: FormattedSection) {
         const start = this.paintVertexArray.length;
         assert(Array.isArray(availableImages));
+        // $FlowFixMe[method-unbinding]
         const value = this.expression.evaluate(new EvaluationParameters(0), feature, {}, canonical, availableImages, formattedSection);
         this.paintVertexArray.resize(newLength);
         this._setPaintValue(start, newLength, value, feature);
@@ -197,8 +202,8 @@ class SourceExpressionBinder implements AttributeBinder {
         this._setPaintValue(start, end, value, feature);
     }
 
-    _setPaintValue(start, end, value, feature) {
-        if (this.type === "color") {
+    _setPaintValue(start: number, end: number, value: any, feature: any) {
+        if (this.type === 'color') {
             const color = packColor(value);
 
             let shapeColor = "#ffffff"
@@ -274,7 +279,9 @@ class CompositeExpressionBinder implements AttributeBinder, UniformBinder {
     }
 
     populatePaintArray(newLength: number, feature: Feature, imagePositions: SpritePositions, availableImages: Array<string>, canonical?: CanonicalTileID, formattedSection?: FormattedSection) {
+        // $FlowFixMe[method-unbinding]
         const min = this.expression.evaluate(new EvaluationParameters(this.zoom), feature, {}, canonical, availableImages, formattedSection);
+        // $FlowFixMe[method-unbinding]
         const max = this.expression.evaluate(new EvaluationParameters(this.zoom + 1), feature, {}, canonical, availableImages, formattedSection);
         const start = this.paintVertexArray.length;
         this.paintVertexArray.resize(newLength);
@@ -287,7 +294,7 @@ class CompositeExpressionBinder implements AttributeBinder, UniformBinder {
         this._setPaintValue(start, end, min, max);
     }
 
-    _setPaintValue(start, end, min, max) {
+    _setPaintValue(start: number, end: number, min: any, max: any) {
         if (this.type === 'color') {
             const minColor = packColor(min);
             const maxColor = packColor(max);
@@ -324,6 +331,7 @@ class CompositeExpressionBinder implements AttributeBinder, UniformBinder {
         uniform.set(program, uniformName, factor);
     }
 
+    // $FlowFixMe[method-unbinding]
     getBinding(context: Context, _: string): Uniform1f {
         return new Uniform1f(context);
     }
@@ -359,7 +367,7 @@ class PatternCompositeBinder implements AttributeBinder {
         this._setPaintValues(start, end, feature.patterns && feature.patterns[this.layerId], imagePositions);
     }
 
-    _setPaintValues(start, end, patterns, positions) {
+    _setPaintValues(start: number, end: number, patterns: ?string, positions: SpritePositions) {
         if (!positions || !patterns) return;
 
         const pos = positions[patterns];
@@ -423,7 +431,7 @@ export default class ProgramConfiguration {
             const names = paintAttributeNames(property, layer.type);
             const expression = value.value;
             const type = value.property.specification.type;
-            const useIntegerZoom = value.property.useIntegerZoom;
+            const useIntegerZoom = !!value.property.useIntegerZoom;
             const isPattern = property === 'line-dasharray' || property.endsWith('pattern');
             const sourceException = property === 'line-dasharray' && (layer.layout: any).get('line-cap').value.kind !== 'constant';
 
@@ -436,12 +444,19 @@ export default class ProgramConfiguration {
             } else if (expression.kind === 'source' || sourceException || isPattern) {
                 const StructArrayLayout = layoutType(property, type, 'source');
                 this.binders[property] = isPattern ?
+                    // $FlowFixMe[prop-missing]
+                    // $FlowFixMe[incompatible-call] - expression can be a `composite` or `constant` kind expression
                     new PatternCompositeBinder(expression, names, type, StructArrayLayout, layer.id) :
+                    // $FlowFixMe[prop-missing]
+                    // $FlowFixMe[incompatible-call] - expression can be a `composite` or `constant` kind expression
                     new SourceExpressionBinder(expression, names, type, StructArrayLayout);
+
                 keys.push(`/a_${property}`);
 
             } else {
                 const StructArrayLayout = layoutType(property, type, 'composite');
+                // $FlowFixMe[prop-missing]
+                // $FlowFixMe[incompatible-call] — expression can be a `constant` kind expression
                 this.binders[property] = new CompositeExpressionBinder(expression, names, type, useIntegerZoom, zoom, StructArrayLayout);
                 keys.push(`/z_${property}`);
             }
@@ -660,7 +675,7 @@ const attributeNameExceptions = {
     'line-dasharray': ['dash']
 };
 
-function paintAttributeNames(property, type) {
+function paintAttributeNames(property: string, type: string) {
     return attributeNameExceptions[property] || [property.replace(`${type}-`, '').replace(/-/g, '_')];
 }
 
@@ -694,8 +709,11 @@ const defaultLayouts = {
     }
 };
 
-function layoutType(property, type, binderType) {
+type LayoutType = 'array' | 'boolean' | 'color' | 'enum' | 'number' | 'resolvedImage' | 'string';
+
+function layoutType(property: string, type: LayoutType, binderType: string) {
     const layoutException = propertyExceptions[property];
+    // $FlowFixMe[prop-missing] - we don't cover all types in defaultLayouts for some reason
     return (layoutException && layoutException[binderType]) || defaultLayouts[type][binderType];
 }
 

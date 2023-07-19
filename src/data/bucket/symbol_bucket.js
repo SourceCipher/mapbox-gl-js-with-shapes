@@ -132,7 +132,7 @@ const shaderOpacityAttributes = [
     {name: 'a_fade_opacity', components: 1, type: 'Uint8', offset: 0}
 ];
 
-function addVertex(array, tileAnchorX, tileAnchorY, ox, oy, tx, ty, sizeVertex, isSDF: boolean, pixelOffsetX, pixelOffsetY, minFontScaleX, minFontScaleY) {
+function addVertex(array: SymbolLayoutArray, tileAnchorX: number, tileAnchorY: number, ox: number, oy: number, tx: number, ty: number, sizeVertex: any, isSDF: boolean, pixelOffsetX: number, pixelOffsetY: number, minFontScaleX: number, minFontScaleY: number) {
     const aSizeX = sizeVertex ? Math.min(MAX_PACKED_SIZE, Math.round(sizeVertex[0])) : 0;
     const aSizeY = sizeVertex ? Math.min(MAX_PACKED_SIZE, Math.round(sizeVertex[1])) : 0;
 
@@ -155,7 +155,7 @@ function addVertex(array, tileAnchorX, tileAnchorY, ox, oy, tx, ty, sizeVertex, 
     );
 }
 
-function addGlobeVertex(array, projAnchorX, projAnchorY, projAnchorZ, normX, normY, normZ) {
+function addGlobeVertex(array: SymbolGlobeExtArray, projAnchorX: number, projAnchorY: number, projAnchorZ: number, normX: number, normY: number, normZ: number) {
     array.emplaceBack(
         // a_globe_anchor
         projAnchorX,
@@ -461,8 +461,10 @@ class SymbolBucket implements Bucket {
 
     calculateGlyphDependencies(text: string, stack: {[_: number]: boolean}, textAlongLine: boolean, allowVerticalPlacement: boolean, doesAllowVerticalWritingMode: boolean) {
         for (let i = 0; i < text.length; i++) {
-            stack[text.charCodeAt(i)] = true;
-            if (allowVerticalPlacement && doesAllowVerticalWritingMode) {
+            const codePoint = text.codePointAt(i);
+            if (codePoint === undefined) break;
+            stack[codePoint] = true;
+            if (allowVerticalPlacement && doesAllowVerticalWritingMode && codePoint <= 65535) {
                 const verticalChar = verticalizedCharacterMap[text.charAt(i)];
                 if (verticalChar) {
                     stack[verticalChar.charCodeAt(0)] = true;
@@ -506,6 +508,7 @@ class SymbolBucket implements Bucket {
 
             const needGeometry = layer._featureFilter.needGeometry;
             const evaluationFeature = toEvaluationFeature(feature, needGeometry);
+            // $FlowFixMe[method-unbinding]
             if (!layer._featureFilter.filter(globalProperties, evaluationFeature, canonical)) {
                 continue;
             }
@@ -520,7 +523,7 @@ class SymbolBucket implements Bucket {
 
                 // cos(11.25 degrees) = 0.98078528056
                 const cosAngleThreshold = 0.98078528056;
-                const predicate = (a, b) => {
+                const predicate = (a: Point, b: Point) => {
                     const v0 = tileCoordToECEF(a.x, a.y, canonical, 1);
                     const v1 = tileCoordToECEF(b.x, b.y, canonical, 1);
                     return vec3.dot(v0, v1) < cosAngleThreshold;

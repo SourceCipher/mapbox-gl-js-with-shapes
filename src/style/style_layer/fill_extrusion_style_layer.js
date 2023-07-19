@@ -45,6 +45,7 @@ class FillExtrusionStyleLayer extends StyleLayer {
         return new FillExtrusionBucket(parameters);
     }
 
+    // $FlowFixMe[method-unbinding]
     queryRadius(): number {
         return translateDistance(this.paint.get('fill-extrusion-translate'));
     }
@@ -63,6 +64,7 @@ class FillExtrusionStyleLayer extends StyleLayer {
         return new ProgramConfiguration(this, zoom);
     }
 
+    // $FlowFixMe[method-unbinding]
     queryIntersectsFeature(queryGeometry: TilespaceQueryGeometry,
                            feature: IVectorTileFeature,
                            featureState: FeatureState,
@@ -116,7 +118,7 @@ class FillExtrusionStyleLayer extends StyleLayer {
     }
 }
 
-function dot(a, b) {
+function dot(a: Point, b: Point) {
     return a.x * b.x + a.y * b.y;
 }
 
@@ -227,7 +229,7 @@ function projectExtrusionGlobe(tr: Transform, geometry: Array<Array<Point>>, zBa
     const basePoint = [0, 0, 0, 1];
     const topPoint = [0, 0, 0, 1];
 
-    const setPoint = (point, x, y, z) => {
+    const setPoint = (point: Array<number>, x: number, y: number, z: number) => {
         point[0] = x;
         point[1] = y;
         point[2] = z;

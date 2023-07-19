@@ -279,7 +279,9 @@ export class Terrain extends Elevation {
     }
 
     set style(style: Style) {
+        // $FlowFixMe[method-unbinding]
         style.on('data', this._onStyleDataEvent.bind(this));
+        // $FlowFixMe[method-unbinding]
         style.on('neworder', this._checkRenderCacheEfficiency.bind(this));
         this._style = style;
         this._checkRenderCacheEfficiency();
@@ -538,7 +540,9 @@ export class Terrain extends Elevation {
         const demId = demTile.tileID.canonical;
         const demScaleBy = Math.pow(2, demId.z - proxyId.z);
         const suffix = uniformSuffix || "";
+        // $FlowFixMe[prop-missing]
         uniforms[`u_dem_tl${suffix}`] = [proxyId.x * demScaleBy % 1, proxyId.y * demScaleBy % 1];
+        // $FlowFixMe[prop-missing]
         uniforms[`u_dem_scale${suffix}`] = demScaleBy;
         return true;
     }
@@ -937,7 +941,7 @@ export class Terrain extends Elevation {
             }
         }
 
-        const isTransitioning = id => {
+        const isTransitioning = (id: string) => {
             const layer = this._style._layers[id];
             const isHidden = layer.isHidden(this.painter.transform.zoom);
             if (layer.type === 'custom') {
@@ -1033,7 +1037,7 @@ export class Terrain extends Elevation {
             return;
         }
 
-        const batches = [];
+        const batches: Array<RenderBatch> = [];
 
         let currentLayer = 0;
         let layer = this._style._layers[layerIds[currentLayer]];
@@ -1041,7 +1045,7 @@ export class Terrain extends Elevation {
             layer = this._style._layers[layerIds[currentLayer]];
         }
 
-        let batchStart;
+        let batchStart: number | void;
         for (; currentLayer < layerCount; ++currentLayer) {
             const layer = this._style._layers[layerIds[currentLayer]];
             if (layer.isHidden(this.painter.transform.zoom)) {
@@ -1341,6 +1345,7 @@ export class Terrain extends Elevation {
         const imageSource: ImageSource = ((sourceCache.getSource(): any): ImageSource);
 
         const anchor = new Point(imageSource.tileID.x, imageSource.tileID.y)._div(1 << imageSource.tileID.z);
+        // $FlowFixMe[method-unbinding]
         const aabb = imageSource.coordinates.map(MercatorCoordinate.fromLngLat).reduce((acc, coord) => {
             acc.min.x = Math.min(acc.min.x, coord.x - anchor.x);
             acc.min.y = Math.min(acc.min.y, coord.y - anchor.y);
@@ -1350,7 +1355,7 @@ export class Terrain extends Elevation {
         }, {min: new Point(Number.MAX_VALUE, Number.MAX_VALUE), max: new Point(-Number.MAX_VALUE, -Number.MAX_VALUE)});
 
         // Fast conservative check using aabb: content outside proxy tile gets clipped out by on render, anyway.
-        const tileOutsideImage = (tileID, imageTileID) => {
+        const tileOutsideImage = (tileID: OverscaledTileID, imageTileID: OverscaledTileID) => {
             const x = tileID.wrap + tileID.canonical.x / (1 << tileID.canonical.z);
             const y = tileID.canonical.y / (1 << tileID.canonical.z);
             const d = EXTENT / (1 << tileID.canonical.z);
@@ -1414,7 +1419,7 @@ export class Terrain extends Elevation {
     // caching "not found" results along the lookup, to leave the lookup early.
     // Not found is cached by this._findCoveringTileCache[key] = null;
     _findTileCoveringTileID(tileID: OverscaledTileID, sourceCache: SourceCache): ?Tile {
-        let tile = sourceCache.getTile(tileID);
+        let tile: ?Tile = sourceCache.getTile(tileID);
         if (tile && tile.hasData()) return tile;
 
         const lookup = this._findCoveringTileCache[sourceCache.id];
@@ -1448,7 +1453,7 @@ export class Terrain extends Elevation {
             }
         }
 
-        const pathToLookup = (key) => {
+        const pathToLookup = (key: ?number) => {
             path.forEach(id => { lookup[id] = key; });
             path.length = 0;
         };
@@ -1507,7 +1512,7 @@ export class Terrain extends Elevation {
 
 }
 
-function sortByDistanceToCamera(tileIDs, painter) {
+function sortByDistanceToCamera(tileIDs: Array<OverscaledTileID>, painter: Painter) {
     const cameraCoordinate = painter.transform.pointCoordinate(painter.transform.getCameraPoint());
     const cameraPoint = new Point(cameraCoordinate.x, cameraCoordinate.y);
     tileIDs.sort((a, b) => {
@@ -1564,7 +1569,7 @@ function createGrid(count: number): [PosArray, TriangleIndexArray, number] {
     // For cases when there's no need to render "skirt", the "inner" grid indices
     // are followed by skirt indices.
     const skirtIndicesOffset = (size - 3) * (size - 3) * 2;
-    const quad = (i, j) => {
+    const quad = (i: number, j: number) => {
         const index = j * size + i;
         indexArray.emplaceBack(index + 1, index, index + size);
         indexArray.emplaceBack(index + size, index + size + 1, index + 1);

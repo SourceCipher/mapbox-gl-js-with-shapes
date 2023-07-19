@@ -13,7 +13,7 @@ import Point from '@mapbox/point-geometry';
 import type Transform from '../geo/transform.js';
 import type StyleLayer from '../style/style_layer.js';
 import type Tile from '../source/tile.js';
-import type SymbolBucket, {CollisionArrays, SingleCollisionBox} from '../data/bucket/symbol_bucket.js';
+import type SymbolBucket, {SymbolBuffers, CollisionArrays, SingleCollisionBox} from '../data/bucket/symbol_bucket.js';
 import type {CollisionBoxArray, CollisionVertexArray, SymbolInstance} from '../data/array_types.js';
 import type FeatureIndex from '../data/feature_index.js';
 import {getSymbolPlacementTileProjectionMatrix} from '../geo/projection/projection_util.js';
@@ -21,6 +21,10 @@ import type {OverscaledTileID} from '../source/tile_id.js';
 import type {TextAnchor} from './symbol_layout.js';
 import type {FogState} from '../style/fog_helpers.js';
 import type {Mat4} from 'gl-matrix';
+import type {PlacedCollisionBox} from './collision_index.js';
+
+// PlacedCollisionBox with all fields optional
+type PartialPlacedCollisionBox = $ObjMap<PlacedCollisionBox, <V>() => ?V>;
 
 class OpacityState {
     opacity: number;
@@ -336,7 +340,7 @@ export class Placement {
                            textScale: number, rotateWithMap: boolean, pitchWithMap: boolean, textPixelRatio: number,
                            posMatrix: Mat4, collisionGroup: CollisionGroup, textAllowOverlap: boolean,
                            symbolInstance: SymbolInstance, boxIndex: number, bucket: SymbolBucket,
-                           orientation: number, iconBox: ?SingleCollisionBox, textSize: any, iconSize: any): ?{ shift: Point, placedGlyphBoxes: { box: Array<number>, offscreen: boolean, occluded: boolean } }  {
+                           orientation: number, iconBox: ?SingleCollisionBox, textSize: any, iconSize: any): ?{ shift: Point, placedGlyphBoxes: PlacedCollisionBox }  {
 
         const {textOffset0, textOffset1, crossTileID} = symbolInstance;
         const textOffset = [textOffset0, textOffset1];
@@ -384,7 +388,7 @@ export class Placement {
         }
     }
 
-    placeLayerBucketPart(bucketPart: Object, seenCrossTileIDs: { [string | number]: boolean }, showCollisionBoxes: boolean, updateCollisionBoxIfNecessary: boolean) {
+    placeLayerBucketPart(bucketPart: Object, seenCrossTileIDs: Set<number>, showCollisionBoxes: boolean, updateCollisionBoxIfNecessary: boolean) {
 
         const {
             bucket,
@@ -466,27 +470,27 @@ export class Placement {
 
                 if (shouldClip) {
                     this.placements[crossTileID] = new JointPlacement(false, false, false, true);
-                    seenCrossTileIDs[crossTileID] = true;
+                    seenCrossTileIDs.add(crossTileID);
                     return;
                 }
             }
 
-            if (seenCrossTileIDs[crossTileID]) return;
+            if (seenCrossTileIDs.has(crossTileID)) return;
             if (holdingForFade) {
                 // Mark all symbols from this tile as "not placed", but don't add to seenCrossTileIDs, because we don't
                 // know yet if we have a duplicate in a parent tile that _should_ be placed.
                 this.placements[crossTileID] = new JointPlacement(false, false, false);
                 return;
             }
-            let placeText = false;
-            let placeIcon = false;
-            let offscreen = true;
-            let textOccluded = false;
+            let placeText: ?boolean = false;
+            let placeIcon: ?boolean = false;
+            let offscreen: ?boolean = true;
+            let textOccluded: ?boolean = false;
             let iconOccluded = false;
             let shift = null;
 
-            let placed = {box: null, offscreen: null, occluded: null};
-            let placedVerticalText = {box: null, offscreen: null, occluded: null};
+            let placed: PartialPlacedCollisionBox = {box: null, offscreen: null, occluded: null};
+            let placedVerticalText: PartialPlacedCollisionBox = {box: null, offscreen: null, occluded: null};
 
             let placedGlyphBoxes = null;
             let placedGlyphCircles = null;
@@ -514,7 +518,7 @@ export class Placement {
             const textBox = collisionArrays.textBox;
             if (textBox) {
                 updateBoxData(textBox);
-                const updatePreviousOrientationIfNotPlaced = (isPlaced) => {
+                const updatePreviousOrientationIfNotPlaced = (isPlaced: boolean) => {
                     let previousOrientation = WritingMode.horizontal;
                     if (bucket.allowVerticalPlacement && !isPlaced && this.prevPlacement) {
                         const prevPlacedOrientation = this.prevPlacement.placedOrientations[crossTileID];
@@ -527,7 +531,7 @@ export class Placement {
                     return previousOrientation;
                 };
 
-                const placeTextForPlacementModes = (placeHorizontalFn, placeVerticalFn) => {
+                const placeTextForPlacementModes = (placeHorizontalFn: () => PartialPlacedCollisionBox, placeVerticalFn: () => PartialPlacedCollisionBox) => {
                     if (bucket.allowVerticalPlacement && numVerticalGlyphVertices > 0 && collisionArrays.verticalTextBox) {
                         for (const placementMode of bucket.writingModes) {
                             if (placementMode === WritingMode.vertical) {
@@ -544,7 +548,7 @@ export class Placement {
                 };
 
                 if (!layout.get('text-variable-anchor')) {
-                    const placeBox = (collisionTextBox, orientation) => {
+                    const placeBox = (collisionTextBox: SingleCollisionBox, orientation: number) => {
                         const textScale = bucket.getSymbolInstanceTextSize(partiallyEvaluatedTextSize, symbolInstance, this.transform.zoom, boxIndex);
                         const placedFeature = this.collisionIndex.placeCollisionBox(bucket, textScale, collisionTextBox,
                             new Point(0, 0), textAllowOverlap, textPixelRatio, posMatrix, collisionGroup.predicate);
@@ -555,11 +559,11 @@ export class Placement {
                         return placedFeature;
                     };
 
-                    const placeHorizontal = () => {
+                    const placeHorizontal: () => PlacedCollisionBox = () => {
                         return placeBox(textBox, WritingMode.horizontal);
                     };
 
-                    const placeVertical = () => {
+                    const placeVertical: () => PlacedCollisionBox | PartialPlacedCollisionBox = () => {
                         const verticalTextBox = collisionArrays.verticalTextBox;
                         if (bucket.allowVerticalPlacement && numVerticalGlyphVertices > 0 && verticalTextBox) {
                             updateBoxData(verticalTextBox);
@@ -568,8 +572,13 @@ export class Placement {
                         return {box: null, offscreen: null, occluded: null};
                     };
 
-                    placeTextForPlacementModes(placeHorizontal, placeVertical);
-                    updatePreviousOrientationIfNotPlaced(placed && placed.box && placed.box.length);
+                    placeTextForPlacementModes(
+                        ((placeHorizontal: any): () => PartialPlacedCollisionBox),
+                        ((placeVertical: any): () => PartialPlacedCollisionBox),
+                    );
+
+                    const isPlaced = placed && placed.box && placed.box.length;
+                    updatePreviousOrientationIfNotPlaced(!!isPlaced);
 
                 } else {
                     let anchors = layout.get('text-variable-anchor');
@@ -585,7 +594,7 @@ export class Placement {
                         }
                     }
 
-                    const placeBoxForVariableAnchors = (collisionTextBox, collisionIconBox, orientation) => {
+                    const placeBoxForVariableAnchors = (collisionTextBox: SingleCollisionBox, collisionIconBox: ?SingleCollisionBox, orientation: number) => {
                         const textScale = bucket.getSymbolInstanceTextSize(partiallyEvaluatedTextSize, symbolInstance, this.transform.zoom, boxIndex);
                         const width = (collisionTextBox.x2 - collisionTextBox.x1) * textScale + 2.0 * collisionTextBox.padding;
                         const height = (collisionTextBox.y2 - collisionTextBox.y1) * textScale + 2.0 * collisionTextBox.padding;
@@ -593,7 +602,7 @@ export class Placement {
                         const variableIconBox = hasIconTextFit && !iconAllowOverlap ? collisionIconBox : null;
                         if (variableIconBox) updateBoxData(variableIconBox);
 
-                        let placedBox: ?{ box: Array<number>, offscreen: boolean, occluded: boolean } = {box: [], offscreen: false, occluded: false};
+                        let placedBox: PartialPlacedCollisionBox = {box: [], offscreen: false, occluded: false};
                         const placementAttempts = textAllowOverlap ? anchors.length * 2 : anchors.length;
                         for (let i = 0; i < placementAttempts; ++i) {
                             const anchor = anchors[i % anchors.length];
@@ -605,7 +614,7 @@ export class Placement {
                                 partiallyEvaluatedTextSize, partiallyEvaluatedIconSize);
 
                             if (result) {
-                                placedBox = result.placedGlyphBoxes;
+                                placedBox = ((result.placedGlyphBoxes: any): PartialPlacedCollisionBox);
                                 if (placedBox && placedBox.box && placedBox.box.length) {
                                     placeText = true;
                                     shift = result.shift;
@@ -639,7 +648,8 @@ export class Placement {
                         textOccluded = placed.occluded;
                     }
 
-                    const prevOrientation = updatePreviousOrientationIfNotPlaced(placed && placed.box);
+                    const isPlaced = placed && placed.box;
+                    const prevOrientation = updatePreviousOrientationIfNotPlaced(!!isPlaced);
 
                     // If we didn't get placed, we still need to copy our position from the last placement for
                     // fade animations
@@ -702,7 +712,7 @@ export class Placement {
 
             if (collisionArrays.iconBox) {
 
-                const placeIconFeature = iconBox => {
+                const placeIconFeature = (iconBox: SingleCollisionBox) => {
                     updateBoxData(iconBox);
                     const shiftPoint: Point = hasIconTextFit && shift ?
                         offsetShift(shift.x, shift.y, rotateWithMap, pitchWithMap, this.transform.angle) :
@@ -782,7 +792,7 @@ export class Placement {
             alwaysShowIcon = alwaysShowIcon && (notGlobe || !iconOccluded);
 
             this.placements[crossTileID] = new JointPlacement(placeText || alwaysShowText, placeIcon || alwaysShowIcon, offscreen || bucket.justReloaded);
-            seenCrossTileIDs[crossTileID] = true;
+            seenCrossTileIDs.add(crossTileID);
         };
 
         if (zOrderByViewportY) {
@@ -909,7 +919,7 @@ export class Placement {
     }
 
     updateLayerOpacities(styleLayer: StyleLayer, tiles: Array<Tile>) {
-        const seenCrossTileIDs = {};
+        const seenCrossTileIDs = new Set();
         for (const tile of tiles) {
             const symbolBucket = ((tile.getBucket(styleLayer): any): SymbolBucket);
             if (symbolBucket && tile.latestFeatureIndex && styleLayer.id === symbolBucket.layerIds[0]) {
@@ -918,7 +928,7 @@ export class Placement {
         }
     }
 
-    updateBucketOpacities(bucket: SymbolBucket, seenCrossTileIDs: { [string | number]: boolean }, collisionBoxArray: ?CollisionBoxArray) {
+    updateBucketOpacities(bucket: SymbolBucket, seenCrossTileIDs: Set<number>, collisionBoxArray: ?CollisionBoxArray) {
         if (bucket.hasTextData()) bucket.text.opacityVertexArray.clear();
         if (bucket.hasIconData()) bucket.icon.opacityVertexArray.clear();
         if (bucket.hasIconCollisionBoxData()) bucket.iconCollisionBox.collisionVertexArray.clear();
@@ -946,7 +956,7 @@ export class Placement {
             bucket.deserializeCollisionBoxes(collisionBoxArray);
         }
 
-        const addOpacities = (iconOrText, numVertices: number, opacity: number) => {
+        const addOpacities = (iconOrText: SymbolBuffers, numVertices: number, opacity: number) => {
             for (let i = 0; i < numVertices / 4; i++) {
                 iconOrText.opacityVertexArray.emplaceBack(opacity);
             }
@@ -963,7 +973,7 @@ export class Placement {
                 numIconVertices
             } = symbolInstance;
 
-            const isDuplicate = seenCrossTileIDs[crossTileID];
+            const isDuplicate = seenCrossTileIDs.has(crossTileID);
 
             let opacityState = this.opacities[crossTileID];
             if (isDuplicate) {
@@ -974,7 +984,7 @@ export class Placement {
                 this.opacities[crossTileID] = opacityState;
             }
 
-            seenCrossTileIDs[crossTileID] = true;
+            seenCrossTileIDs.add(crossTileID);
 
             const hasText = numHorizontalGlyphVertices > 0 || numVerticalGlyphVertices > 0;
             const hasIcon = numIconVertices > 0;

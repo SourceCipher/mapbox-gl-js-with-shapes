@@ -53,7 +53,6 @@ class SourceCache extends Evented {
     _shouldReloadOnResume: boolean;
     _coveredTiles: {[_: number | string]: boolean};
     transform: Transform;
-    _isIdRenderable: (id: number, symbolLayer?: boolean) => boolean;
     used: boolean;
     usedForTerrain: boolean;
     _state: SourceFeatureState;
@@ -90,6 +89,7 @@ class SourceCache extends Evented {
 
         this._source = source;
         this._tiles = {};
+        // $FlowFixMe[method-unbinding]
         this._cache = new TileCache(0, this._unloadTile.bind(this));
         this._timers = {};
         this._cacheTimers = {};
@@ -246,6 +246,7 @@ class SourceCache extends Evented {
             tile.state = state;
         }
 
+        // $FlowFixMe[method-unbinding]
         this._loadTile(tile, this._tileLoaded.bind(this, tile, id, state));
     }
 
@@ -291,7 +292,7 @@ class SourceCache extends Evented {
             }
         }
 
-        function fillBorder(tile, borderTile) {
+        function fillBorder(tile: Tile, borderTile: Tile) {
             if (!tile.dem || tile.dem.borderReady) return;
             tile.needsHillshadePrepare = true;
             tile.needsDEMTextureUpload = true;
@@ -743,7 +744,7 @@ class SourceCache extends Evented {
      * @private
      */
     _addTile(tileID: OverscaledTileID): Tile {
-        let tile = this._tiles[tileID.key];
+        let tile: ?Tile = this._tiles[tileID.key];
         if (tile) return tile;
 
         tile = this._cache.getAndRemove(tileID);
@@ -763,6 +764,7 @@ class SourceCache extends Evented {
         if (!cached) {
             const painter = this.map ? this.map.painter : null;
             tile = new Tile(tileID, this._source.tileSize * tileID.overscaleFactor(), this.transform.tileZoom, painter, this._isRaster);
+            // $FlowFixMe[method-unbinding]
             this._loadTile(tile, this._tileLoaded.bind(this, tile, tileID.key, tile.state));
         }
 
@@ -992,6 +994,17 @@ class SourceCache extends Evented {
      * @returns {Object} Returns `this` | Promise.
      */
     _preloadTiles(transform: Transform | Array<Transform>, callback: Callback<any>) {
+        if (!this._sourceLoaded) {
+            const waitUntilSourceLoaded = () => {
+                if (!this._sourceLoaded) return;
+                this._source.off('data', waitUntilSourceLoaded);
+                this._preloadTiles(transform, callback);
+            };
+
+            this._source.on('data', waitUntilSourceLoaded);
+            return;
+        }
+
         const coveringTilesIDs: Map<number, OverscaledTileID> = new Map();
         const transforms = Array.isArray(transform) ? transform : [transform];
 
@@ -1041,7 +1054,7 @@ function compareTileId(a: OverscaledTileID, b: OverscaledTileID): number {
     return a.overscaledZ - b.overscaledZ || bWrap - aWrap || b.canonical.y - a.canonical.y || b.canonical.x - a.canonical.x;
 }
 
-function isRasterType(type): boolean {
+function isRasterType(type: string): boolean {
     return type === 'raster' || type === 'image' || type === 'video' || type === 'custom';
 }
 

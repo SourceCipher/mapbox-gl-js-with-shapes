@@ -29,7 +29,6 @@ import {
     create as createSource,
     getType as getSourceType,
     setType as setSourceType,
-    type SourceClass
 } from '../source/source.js';
 import {queryRenderedFeatures, queryRenderedSymbols, querySourceFeatures} from '../source/query_features.js';
 import SourceCache from '../source/source_cache.js';
@@ -83,7 +82,7 @@ import type {QueryResult} from '../data/feature_index.js';
 import type {QueryFeature} from '../util/vectortile_to_geojson.js';
 import type {FeatureStates} from '../source/source_state.js';
 import type {PointLike} from '@mapbox/point-geometry';
-import type {Source} from '../source/source.js';
+import type {Source, SourceClass} from '../source/source.js';
 import type {TransitionParameters} from './properties.js';
 
 const supportedDiffOperations = pick(diffOperations, [
@@ -320,24 +319,25 @@ class Style extends Evented {
 
         this.glyphManager.setURL(json.glyphs);
 
-        const layers = deref(this.stylesheet.layers);
+        const layers: Array<LayerSpecification> = deref(this.stylesheet.layers);
 
         this._order = layers.map((layer) => layer.id);
 
         this._layers = {};
         this._serializedLayers = {};
-        for (let layer of layers) {
-            layer = createStyleLayer(layer);
-            layer.setEventedParent(this, {layer: {id: layer.id}});
-            this._layers[layer.id] = layer;
-            this._serializedLayers[layer.id] = layer.serialize();
-            this._updateLayerCount(layer, true);
+        for (const layer of layers) {
+            const styleLayer = createStyleLayer(layer);
+            styleLayer.setEventedParent(this, {layer: {id: styleLayer.id}});
+            this._layers[styleLayer.id] = styleLayer;
+            this._serializedLayers[styleLayer.id] = styleLayer.serialize();
+            this._updateLayerCount(styleLayer, true);
         }
 
         this.dispatcher.broadcast('setLayers', this._serializeLayers(this._order));
 
         this.light = new Light(this.stylesheet.light);
         if (this.stylesheet.terrain && !this.terrainSetForDrapingOnly()) {
+            // $FlowFixMe[incompatible-call] - Flow can't infer that terrain is not undefined
             this._createTerrain(this.stylesheet.terrain, DrapeRenderMode.elevated);
         }
         if (this.stylesheet.fog) {
@@ -491,7 +491,7 @@ class Style extends Evented {
         return drapedLayers[layer.type];
     }
 
-    _checkLoaded() {
+    _checkLoaded(): void {
         if (!this._loaded) {
             throw new Error('Style is not done loading');
         }
@@ -710,7 +710,7 @@ class Style extends Evented {
         return this._availableImages.slice();
     }
 
-    addSource(id: string, source: SourceSpecification, options: StyleSetterOptions = {}) {
+    addSource(id: string, source: SourceSpecification, options: StyleSetterOptions = {}): void {
         this._checkLoaded();
 
         if (this.getSource(id) !== undefined) {
@@ -735,7 +735,7 @@ class Style extends Evented {
             sourceId: id
         }));
 
-        const addSourceCache = (onlySymbols) => {
+        const addSourceCache = (onlySymbols: boolean) => {
             const sourceCacheId = (onlySymbols ? 'symbol:' : 'other:') + id;
             const sourceCache = this._sourceCaches[sourceCacheId] = new SourceCache(sourceCacheId, sourceInstance, onlySymbols);
             (onlySymbols ? this._symbolSourceCaches : this._otherSourceCaches)[id] = sourceCache;
@@ -906,6 +906,7 @@ class Style extends Evented {
         }
         this._updateLayer(layer);
 
+        // $FlowFixMe[method-unbinding]
         if (layer.onAdd) {
             layer.onAdd(this.map);
         }
@@ -1283,7 +1284,7 @@ class Style extends Evented {
         //      This means that that the line_layer feature is above the extrusion_layer_b feature despite
         //      it being in an earlier layer.
 
-        const isLayer3D = layerId => this._layers[layerId].type === 'fill-extrusion';
+        const isLayer3D = (layerId: string) => this._layers[layerId].type === 'fill-extrusion';
 
         const layerIndex = {};
         const features3D = [];
@@ -1390,6 +1391,7 @@ class Style extends Evented {
                 queryRenderedSymbols(
                     this._layers,
                     this._serializedLayers,
+                    // $FlowFixMe[method-unbinding]
                     this._getLayerSourceCache.bind(this),
                     queryGeometryStruct.screenGeometry,
                     params,
@@ -1478,37 +1480,40 @@ class Style extends Evented {
             return;
         }
 
+        let options: TerrainSpecification = terrainOptions;
         if (drapeRenderMode === DrapeRenderMode.elevated) {
             // Input validation and source object unrolling
-            if (typeof terrainOptions.source === 'object') {
+            if (typeof options.source === 'object') {
                 const id = 'terrain-dem-src';
-                this.addSource(id, ((terrainOptions.source): any));
-                terrainOptions = clone(terrainOptions);
-                terrainOptions = (extend(terrainOptions, {source: id}): any);
+                this.addSource(id, options.source);
+                options = clone(options);
+                options = extend(options, {source: id});
             }
 
-            if (this._validate(validateTerrain, 'terrain', terrainOptions)) {
+            if (this._validate(validateTerrain, 'terrain', options)) {
                 return;
             }
         }
 
         // Enabling
         if (!this.terrain || (this.terrain && drapeRenderMode !== this.terrain.drapeRenderMode)) {
-            this._createTerrain(terrainOptions, drapeRenderMode);
+            if (!options) return;
+            this._createTerrain(options, drapeRenderMode);
         } else { // Updating
             const terrain = this.terrain;
             const currSpec = terrain.get();
 
             for (const name of Object.keys(styleSpec.terrain)) {
                 // Fallback to use default style specification when the properties wasn't set
-                if (!terrainOptions.hasOwnProperty(name) && !!styleSpec.terrain[name].default) {
-                    terrainOptions[name] = styleSpec.terrain[name].default;
+                if (!options.hasOwnProperty(name) && !!styleSpec.terrain[name].default) {
+                    // $FlowFixMe[prop-missing]
+                    options[name] = styleSpec.terrain[name].default;
                 }
             }
-            for (const key in terrainOptions) {
-                if (!deepEqual(terrainOptions[key], currSpec[key])) {
-                    terrain.set(terrainOptions);
-                    this.stylesheet.terrain = terrainOptions;
+            for (const key in options) {
+                if (!deepEqual(options[key], currSpec[key])) {
+                    terrain.set(options);
+                    this.stylesheet.terrain = options;
                     const parameters = this._setTransitionParameters({duration: 0});
                     terrain.updateTransitions(parameters);
                     break;

@@ -27,7 +27,8 @@ type Options = {
     rotation?: number,
     rotationAlignment?: string,
     pitchAlignment?: string,
-    occludedOpacity?: number
+    occludedOpacity?: number,
+    className?: string
 };
 
 /**
@@ -36,7 +37,7 @@ type Options = {
  * @param {Object} [options]
  * @param {HTMLElement} [options.element] DOM element to use as a marker. The default is a light blue, droplet-shaped SVG marker.
  * @param {string} [options.anchor='center'] A string indicating the part of the Marker that should be positioned closest to the coordinate set via {@link Marker#setLngLat}.
- *   Options are `'center'`, `'top'`, `'bottom'`, `'left'`, `'right'`, `'top-left'`, `'top-right'`, `'bottom-left'`, and `'bottom-right'`.
+ *     Options are `'center'`, `'top'`, `'bottom'`, `'left'`, `'right'`, `'top-left'`, `'top-right'`, `'bottom-left'`, and `'bottom-right'`.
  * @param {PointLike} [options.offset] The offset in pixels as a {@link PointLike} object to apply relative to the element's center. Negatives indicate left and up.
  * @param {string} [options.color='#3FB1CE'] The color to use for the default marker if `options.element` is not provided. The default is light blue.
  * @param {number} [options.scale=1] The scale to use for the default marker if `options.element` is not provided. The default scale corresponds to a height of `41px` and a width of `27px`.
@@ -46,6 +47,7 @@ type Options = {
  * @param {string} [options.pitchAlignment='auto'] `'map'` aligns the `Marker` to the plane of the map. `'viewport'` aligns the `Marker` to the plane of the viewport. `'auto'` automatically matches the value of `rotationAlignment`.
  * @param {string} [options.rotationAlignment='auto'] The alignment of the marker's rotation.`'map'` is aligned with the map plane, consistent with the cardinal directions as the map rotates. `'viewport'` is screenspace-aligned. `'horizon'` is aligned according to the nearest horizon, on non-globe projections it is equivalent to `'viewport'`. `'auto'` is equivalent to `'viewport'`.
  * @param {number} [options.occludedOpacity=0.2] The opacity of a marker that's occluded by 3D terrain.
+ * @param {string} [options.className] Space-separated CSS class names to add to marker element.
  * @example
  * // Create a new marker.
  * const marker = new mapboxgl.Marker()
@@ -177,6 +179,8 @@ export default class Marker extends Evented {
             classList.remove(`mapboxgl-marker-anchor-${key}`);
         }
         classList.add(`mapboxgl-marker-anchor-${this._anchor}`);
+        const classNames = options && options.className ? options.className.trim().split(/\s+/) : [];
+        classList.add(...classNames);
 
         this._popup = null;
     }
@@ -199,7 +203,9 @@ export default class Marker extends Evented {
         this._map = map;
         map.getCanvasContainer().appendChild(this._element);
         map.on('move', this._updateMoving);
+        // $FlowFixMe[method-unbinding]
         map.on('moveend', this._update);
+        // $FlowFixMe[method-unbinding]
         map.on('remove', this._clearFadeTimer);
         map._addMarker(this);
         this.setDraggable(this._draggable);
@@ -208,6 +214,7 @@ export default class Marker extends Evented {
         // If we attached the `click` listener to the marker element, the popup
         // would close once the event propogated to `map` due to the
         // `Popup#_onClickClose` listener.
+        // $FlowFixMe[method-unbinding]
         map.on('click', this._onMapClick);
 
         return this;
@@ -224,15 +231,24 @@ export default class Marker extends Evented {
     remove(): this {
         const map = this._map;
         if (map) {
+            // $FlowFixMe[method-unbinding]
             map.off('click', this._onMapClick);
             map.off('move', this._updateMoving);
+            // $FlowFixMe[method-unbinding]
             map.off('moveend', this._update);
+            // $FlowFixMe[method-unbinding]
             map.off('mousedown', this._addDragHandler);
+            // $FlowFixMe[method-unbinding]
             map.off('touchstart', this._addDragHandler);
+            // $FlowFixMe[method-unbinding]
             map.off('mouseup', this._onUp);
+            // $FlowFixMe[method-unbinding]
             map.off('touchend', this._onUp);
+            // $FlowFixMe[method-unbinding]
             map.off('mousemove', this._onMove);
+            // $FlowFixMe[method-unbinding]
             map.off('touchmove', this._onMove);
+            // $FlowFixMe[method-unbinding]
             map.off('remove', this._clearFadeTimer);
             map._removeMarker(this);
             this._map = undefined;
@@ -299,7 +315,7 @@ export default class Marker extends Evented {
      * Binds a {@link Popup} to the {@link Marker}.
      *
      * @param {Popup | null} popup An instance of the {@link Popup} class. If undefined or null, any popup
-     * set on this {@link Marker} instance is unset.
+     *     set on this {@link Marker} instance is unset.
      * @returns {Marker} Returns itself to allow for method chaining.
      * @example
      * const marker = new mapboxgl.Marker()
@@ -313,6 +329,7 @@ export default class Marker extends Evented {
             this._popup.remove();
             this._popup = null;
             this._element.removeAttribute('role');
+            // $FlowFixMe[method-unbinding]
             this._element.removeEventListener('keypress', this._onKeyPress);
 
             if (!this._originalTabIndex) {
@@ -345,6 +362,7 @@ export default class Marker extends Evented {
             if (!this._originalTabIndex) {
                 this._element.setAttribute('tabindex', '0');
             }
+            // $FlowFixMe[method-unbinding]
             this._element.addEventListener('keypress', this._onKeyPress);
             this._element.setAttribute('aria-expanded', 'false');
         }
@@ -578,6 +596,7 @@ export default class Marker extends Evented {
             }
 
             if ((map._showingGlobe() || map.getTerrain() || map.getFog()) && !this._fadeTimer) {
+                // $FlowFixMe[method-unbinding]
                 this._fadeTimer = setTimeout(this._evaluateOpacity.bind(this), 60);
             }
         });
@@ -606,6 +625,52 @@ export default class Marker extends Evented {
         this._offset = Point.convert(offset);
         this._update();
         return this;
+    }
+
+    /**
+     * Adds a CSS class to the marker element.
+     *
+     * @param {string} className Non-empty string with CSS class name to add to marker element.
+     * @returns {Marker} Returns itself to allow for method chaining.
+     *
+     * @example
+     * const marker = new mapboxgl.Marker();
+     * marker.addClassName('some-class');
+     */
+    addClassName(className: string): this {
+        this._element.classList.add(className);
+        return this;
+    }
+
+    /**
+     * Removes a CSS class from the marker element.
+     *
+     * @param {string} className Non-empty string with CSS class name to remove from marker element.
+     *
+     * @returns {Marker} Returns itself to allow for method chaining.
+     *
+     * @example
+     * const marker = new mapboxgl.Marker({className: 'some classes'});
+     * marker.removeClassName('some');
+     */
+    removeClassName(className: string): this {
+        this._element.classList.remove(className);
+        return this;
+    }
+
+    /**
+     * Add or remove the given CSS class on the marker element, depending on whether the element currently has that class.
+     *
+     * @param {string} className Non-empty string with CSS class name to add/remove.
+     *
+     * @returns {boolean} If the class was removed return `false`. If the class was added, then return `true`.
+     *
+     * @example
+     * const marker = new mapboxgl.Marker();
+     * marker.toggleClassName('highlighted');
+     */
+    toggleClassName(className: string): boolean {
+        return this._element.classList.toggle(className);
     }
 
     _onMove(e: MapMouseEvent | MapTouchEvent) {
@@ -667,7 +732,9 @@ export default class Marker extends Evented {
 
         const map = this._map;
         if (map) {
+            // $FlowFixMe[method-unbinding]
             map.off('mousemove', this._onMove);
+            // $FlowFixMe[method-unbinding]
             map.off('touchmove', this._onMove);
         }
 
@@ -706,9 +773,13 @@ export default class Marker extends Evented {
             this._pointerdownPos = e.point;
 
             this._state = 'pending';
+            // $FlowFixMe[method-unbinding]
             map.on('mousemove', this._onMove);
+            // $FlowFixMe[method-unbinding]
             map.on('touchmove', this._onMove);
+            // $FlowFixMe[method-unbinding]
             map.once('mouseup', this._onUp);
+            // $FlowFixMe[method-unbinding]
             map.once('touchend', this._onUp);
         }
     }
@@ -729,10 +800,14 @@ export default class Marker extends Evented {
         const map = this._map;
         if (map) {
             if (shouldBeDraggable) {
+                // $FlowFixMe[method-unbinding]
                 map.on('mousedown', this._addDragHandler);
+                // $FlowFixMe[method-unbinding]
                 map.on('touchstart', this._addDragHandler);
             } else {
+                // $FlowFixMe[method-unbinding]
                 map.off('mousedown', this._addDragHandler);
+                // $FlowFixMe[method-unbinding]
                 map.off('touchstart', this._addDragHandler);
             }
         }

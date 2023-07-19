@@ -463,7 +463,9 @@ class Tile {
             const feature = layer.feature(i);
             if (filter.needGeometry) {
                 const evaluationFeature = toEvaluationFeature(feature, true);
+                // $FlowFixMe[method-unbinding]
                 if (!filter.filter(new EvaluationParameters(this.tileID.overscaledZ), evaluationFeature, this.tileID.canonical)) continue;
+            // $FlowFixMe[method-unbinding]
             } else if (!filter.filter(new EvaluationParameters(this.tileID.overscaledZ), feature)) {
                 continue;
             }
@@ -605,10 +607,6 @@ class Tile {
         } else {
             this.texture = new Texture(context, img, gl.RGBA, {useMipmap: true});
             this.texture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
-
-            if (context.extTextureFilterAnisotropic) {
-                gl.texParameterf(gl.TEXTURE_2D, context.extTextureFilterAnisotropic.TEXTURE_MAX_ANISOTROPY_EXT, context.extTextureFilterAnisotropicMax);
-            }
         }
     }
 

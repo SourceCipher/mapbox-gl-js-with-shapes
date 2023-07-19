@@ -25,6 +25,27 @@ import type {
     RasterDEMSourceSpecification
 } from '../style-spec/types.js';
 
+/**
+ * A source containing raster tiles.
+ * See the [Style Specification](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#raster) for detailed documentation of options.
+ *
+ * @example
+ * map.addSource('some id', {
+ *     type: 'raster',
+ *     url: 'mapbox://mapbox.satellite',
+ *     tileSize: 256
+ * });
+ *
+ * @example
+ * map.addSource('some id', {
+ *     type: 'raster',
+ *     tiles: ['https://img.nj.gov/imagerywms/Natural2015?bbox={bbox-epsg-3857}&format=image/png&service=WMS&version=1.1.1&request=GetMap&srs=EPSG:3857&transparent=true&width=256&height=256&layers=Natural2015'],
+ *     tileSize: 256
+ * });
+ *
+ * @see [Example: Add a raster tile source](https://docs.mapbox.com/mapbox-gl-js/example/map-tiles/)
+ * @see [Example: Add a WMS source](https://docs.mapbox.com/mapbox-gl-js/example/wms/)
+ */
 class RasterTileSource extends Evented implements Source {
     type: 'raster' | 'raster-dem';
     id: string;
@@ -63,7 +84,7 @@ class RasterTileSource extends Evented implements Source {
         extend(this, pick(options, ['url', 'scheme', 'tileSize']));
     }
 
-    load() {
+    load(callback?: Callback<void>) {
         this._loaded = false;
         this.fire(new Event('dataloading', {dataType: 'source'}));
         this._tileJSONRequest = loadTileJSON(this._options, this.map._requestManager, null, null, (err, tileJSON) => {
@@ -83,6 +104,8 @@ class RasterTileSource extends Evented implements Source {
                 this.fire(new Event('data', {dataType: 'source', sourceDataType: 'metadata'}));
                 this.fire(new Event('data', {dataType: 'source', sourceDataType: 'content'}));
             }
+
+            if (callback) callback(err);
         });
     }
 
@@ -90,22 +113,78 @@ class RasterTileSource extends Evented implements Source {
         return this._loaded;
     }
 
+    // $FlowFixMe[method-unbinding]
     onAdd(map: Map) {
         this.map = map;
         this.load();
     }
 
+    /**
+     * Reloads the source data and re-renders the map.
+     *
+     * @example
+     * map.getSource('source-id').reload();
+     */
+    // $FlowFixMe[method-unbinding]
+    reload() {
+        this.cancelTileJSONRequest();
+        this.load(() => this.map.style._clearSource(this.id));
+    }
+
+    /**
+     * Sets the source `tiles` property and re-renders the map.
+     *
+     * @param {string[]} tiles An array of one or more tile source URLs, as in the TileJSON spec.
+     * @returns {RasterTileSource} Returns itself to allow for method chaining.
+     * @example
+     * map.addSource('source-id', {
+     *     type: 'raster',
+     *     tiles: ['https://some_end_point.net/{z}/{x}/{y}.png'],
+     *     tileSize: 256
+     * });
+     *
+     * // Set the endpoint associated with a raster tile source.
+     * map.getSource('source-id').setTiles(['https://another_end_point.net/{z}/{x}/{y}.png']);
+     */
+    setTiles(tiles: Array<string>): this {
+        this._options.tiles = tiles;
+        this.reload();
+
+        return this;
+    }
+
+    /**
+     * Sets the source `url` property and re-renders the map.
+     *
+     * @param {string} url A URL to a TileJSON resource. Supported protocols are `http:`, `https:`, and `mapbox://<Tileset ID>`.
+     * @returns {RasterTileSource} Returns itself to allow for method chaining.
+     * @example
+     * map.addSource('source-id', {
+     *     type: 'raster',
+     *     url: 'mapbox://mapbox.satellite'
+     * });
+     *
+     * // Update raster tile source to a new URL endpoint
+     * map.getSource('source-id').setUrl('mapbox://mapbox.satellite');
+     */
+    setUrl(url: string): this {
+        this.url = url;
+        this._options.url = url;
+        this.reload();
+
+        return this;
+    }
+
+    // $FlowFixMe[method-unbinding]
     onRemove() {
-        if (this._tileJSONRequest) {
-            this._tileJSONRequest.cancel();
-            this._tileJSONRequest = null;
-        }
+        this.cancelTileJSONRequest();
     }
 
     serialize(): RasterSourceSpecification | RasterDEMSourceSpecification {
         return extend({}, this._options);
     }
 
+    // $FlowFixMe[method-unbinding]
     hasTile(tileID: OverscaledTileID): boolean {
         return !this.tileBounds || this.tileBounds.contains(tileID.canonical);
     }
@@ -147,6 +226,7 @@ class RasterTileSource extends Evented implements Source {
         }
     }
 
+    // $FlowFixMe[method-unbinding]
     abortTile(tile: Tile, callback: Callback<void>) {
         if (tile.request) {
             tile.request.cancel();
@@ -155,6 +235,7 @@ class RasterTileSource extends Evented implements Source {
         callback();
     }
 
+    // $FlowFixMe[method-unbinding]
     unloadTile(tile: Tile, callback: Callback<void>) {
         if (tile.texture) this.map.painter.saveTileTexture(tile.texture);
         callback();
@@ -162,6 +243,12 @@ class RasterTileSource extends Evented implements Source {
 
     hasTransition(): boolean {
         return false;
+    }
+
+    cancelTileJSONRequest() {
+        if (!this._tileJSONRequest) return;
+        this._tileJSONRequest.cancel();
+        this._tileJSONRequest = null;
     }
 }
 

@@ -55,6 +55,7 @@ function restore(): Window {
 
     // Add webgl context with the supplied GL
     const originalGetContext = window.HTMLCanvasElement.prototype.getContext;
+    // $FlowFixMe[missing-this-annot]
     window.HTMLCanvasElement.prototype.getContext = function (type, attributes) {
         if (type === 'webgl') {
             if (!this._webGLContext) {
@@ -66,10 +67,12 @@ function restore(): Window {
         return originalGetContext.call(this, type, attributes);
     };
 
+    // $FlowFixMe[missing-this-annot]
     window.useFakeHTMLCanvasGetContext = function() {
         this.HTMLCanvasElement.prototype.getContext = function() { return '2d'; };
     };
 
+    // $FlowFixMe[missing-this-annot]
     window.useFakeXMLHttpRequest = function() {
         sinon.xhr.supportsCORS = true;
         this.server = sinon.fakeServer.create();
@@ -80,6 +83,7 @@ function restore(): Window {
 
     window.fakeWorkerPresence = function() {
         global.WorkerGlobalScope = function() {};
+        // $FlowFixMe[invalid-constructor]
         global.self = new global.WorkerGlobalScope();
     };
     window.clearFakeWorkerPresence = function() {

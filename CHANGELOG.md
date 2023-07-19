@@ -1,3 +1,60 @@
+## 2.15.0
+
+## Features ✨ and improvements 🏁
+
+* Improve performance of symbol layers with identical or no text. Eliminate stuttering when zooming on maps with many identical symbols. ([#12669](https://github.com/mapbox/mapbox-gl-js/pull/12669))
+* Improve performance of clustered sources: 20% faster loading & 40–60% less memory overhead. Improve performance of symbol collisions. ([#12682](https://github.com/mapbox/mapbox-gl-js/pull/12682))
+* Add `respectPrefersReducedMotion` map option ([#12694](https://github.com/mapbox/mapbox-gl-js/pull/12694))
+* Add the `isPointOnSurface` map method to determine if the given point is located on a visible map surface. ([#12695](https://github.com/mapbox/mapbox-gl-js/pull/12695))
+
+## Bug fixes 🐞
+
+* Fix inconsistent spacing in the Scale control ([#12644](https://github.com/mapbox/mapbox-gl-js/pull/12644)) (h/t [kathirgounder](https://github.com/kathirgounder))
+* Fix tiles preloading when a source is not yet loaded ([#12699](https://github.com/mapbox/mapbox-gl-js/pull/12699))
+
+## 2.14.1
+
+## Bug fixes 🐞
+
+* Fix a bug where certain bundling configurations involving Vite or ESBuild could produce a broken build. [#12658](https://github.com/mapbox/mapbox-gl-js/pull/12658)
+
+## 2.14.0
+
+### Features ✨ and improvements 🏁
+
+* Support `referrerPolicy` option for the `transformRequest` function when using fetch ([#12590](https://github.com/mapbox/mapbox-gl-js/pull/12590)) (h/t [robertcepa](https://github.com/robertcepa))
+
+## Bug fixes 🐞
+
+* Enable anisotropic filtering on tiles beyond 20 degrees pitch to prevent it from compromising image crispness on flat or low-tilted maps. ([#12577](https://github.com/mapbox/mapbox-gl-js/pull/12577))
+* Fix LngLatBounds.extend() with literal LngLat object. ([#12605](https://github.com/mapbox/mapbox-gl-js/pull/12605))
+* Add arrow characters to the map of verticalized character ([#12608](https://github.com/mapbox/mapbox-gl-js/pull/12608)) (h/t [kkokkojeong](https://github.com/kkokkojeong))
+* Disable panning inertia if `prefers-reduced-motion` is enabled ([#12631](https://github.com/mapbox/mapbox-gl-js/pull/12631))
+
+## 2.13.0
+
+### Features ✨ and improvements 🏁
+
+* Improve rendering performance of terrain slightly by reducing its GPU memory footprint. ([#12472](https://github.com/mapbox/mapbox-gl-js/pull/12472))
+* Add methods for changing a raster tile source dynamically (e.g. `setTiles`, `setUrl`). ([#12352](https://github.com/mapbox/mapbox-gl-js/pull/12352))
+
+### Bug fixes 🐞
+
+* Fix `line-border-color` when used with `line-trim-offset` ([#12461](https://github.com/mapbox/mapbox-gl-js/pull/12461))
+* Fix potential infinite loop when calling `fitBounds` with globe projection ([#12488](https://github.com/mapbox/mapbox-gl-js/pull/12488))
+* Fix `map.getBounds()` returning incorrect bounds with adaptive projections. ([#12503](https://github.com/mapbox/mapbox-gl-js/pull/12503))
+* Introduce skirts for terrain globe mode ([#12523](https://github.com/mapbox/mapbox-gl-js/pull/12523))
+* Fix blur on draped lines while zoom-in ([#12510](https://github.com/mapbox/mapbox-gl-js/pull/12510))
+* Fix map pan speed while pinching in ([#12543](https://github.com/mapbox/mapbox-gl-js/pull/12543))
+* Fix negative-width diacritics handling ([#12554](https://github.com/mapbox/mapbox-gl-js/pull/12554))
+* Fixes `undefined is not an object` in `coalesceChanges` ([#12497](https://github.com/mapbox/mapbox-gl-js/pull/12497)) (h/t [nick-romano](https://github.com/nick-romano))
+
+## 2.12.1
+
+### Bug fixes 🐞
+
+* Fix a rare bug where certain diacritical characters could break the rendering of a symbol layer. ([#12554](https://github.com/mapbox/mapbox-gl-js/pull/12554))
+
 ## 2.12.0
 
 ### Features ✨ and improvements 🏁
