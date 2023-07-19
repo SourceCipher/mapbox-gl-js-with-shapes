@@ -112,7 +112,7 @@
     "build-prod-min": "rollup -c --environment BUILD:production,MINIFY:true",
     "build-csp": "rollup -c rollup.config.csp.js",
     "build-test-suite": "rollup -c test/integration/rollup.config.test.js",
-    "build-flow-types": "mkdir -p dist && cp build/mapbox-gl.js.flow dist/mapbox-gl.js.flow && cp build/mapbox-gl.js.flow dist/mapbox-gl-dev.js.flow",
+    "build-flow-types": "powershell rm dist && powershell mkdir -p dist && powershell cp build/mapbox-gl.js.flow dist/mapbox-gl.js.flow && powershell cp build/mapbox-gl.js.flow dist/mapbox-gl-dev.js.flow",
     "build-css": "postcss -o dist/mapbox-gl.css src/css/mapbox-gl.css",
     "build-style-spec": "cd src/style-spec && npm run build && cd ../.. && mkdir -p dist/style-spec && cp src/style-spec/dist/* dist/style-spec",
     "watch-css": "postcss --watch -o dist/mapbox-gl.css src/css/mapbox-gl.css",
