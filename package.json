@@ -1,5 +1,5 @@
 {
-  "name": "mapbox-gl",
+  "name": "mapbox-gl-js-with-shapes",
   "description": "A WebGL interactive maps library",
   "version": "2.17.0-dev",
   "main": "dist/mapbox-gl.js",
@@ -8,7 +8,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git://github.com/mapbox/mapbox-gl-js.git"
+    "url": "git://github.com/SourceCipher/mapbox-gl-js-with-shapes.git"
   },
   "dependencies": {
     "@mapbox/geojson-rewind": "^0.5.2",
@@ -114,7 +114,7 @@
     "build-test-suite": "rollup -c test/integration/rollup.config.test.js",
     "build-flow-types": "powershell rm dist && powershell mkdir -p dist && powershell cp build/mapbox-gl.js.flow dist/mapbox-gl.js.flow && powershell cp build/mapbox-gl.js.flow dist/mapbox-gl-dev.js.flow",
     "build-css": "postcss -o dist/mapbox-gl.css src/css/mapbox-gl.css",
-    "build-style-spec": "cd src/style-spec && npm run build && cd ../.. && mkdir -p dist/style-spec && cp src/style-spec/dist/* dist/style-spec",
+    "build-style-spec": "powershell cd src/style-spec && powershell cd ../.. && powershell mkdir -p dist/style-spec && powershell cp src/style-spec/dist/* dist/style-spec",
     "watch-css": "postcss --watch -o dist/mapbox-gl.css src/css/mapbox-gl.css",
     "build-token": "node build/generate-access-token-script.js",
     "build-benchmarks": "BENCHMARK_VERSION=${BENCHMARK_VERSION:-\"$(git rev-parse --abbrev-ref HEAD) $(git rev-parse --short=7 HEAD)\"} rollup -c bench/versions/rollup_config_benchmarks.js",

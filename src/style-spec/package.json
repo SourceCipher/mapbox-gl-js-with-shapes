@@ -25,7 +25,7 @@
     "pretest": "npm run build",
     "test": "node ./test.js",
     "copy-flow-typed": "cp -R ../../flow-typed .",
-    "build": "../../node_modules/.bin/rollup -c && ../../node_modules/.bin/rollup -c --environment esm",
+    "build": "powershell ../../node_modules/.bin/rollup -c && powershell ../../node_modules/.bin/rollup -c --environment esm",
     "prepublishOnly": "npm run copy-flow-typed && npm run build",
     "postpublish": "rm -r flow-typed dist/index.cjs"
   },
