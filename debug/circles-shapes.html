@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Mapbox GL JS debug page</title>
+        <meta charset="utf-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, user-scalable=no"
+        />
+        <link rel="stylesheet" href="../dist/mapbox-gl.css" />
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            html,
+            body,
+            #map {
+                height: 100%;
+            }
+            #checkboxes {
+                position: absolute;
+                top: 0;
+                left: 0;
+                padding: 10px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="map"></div>
+
+        <script src="../dist/mapbox-gl-dev.js"></script>
+        <script src="../debug/access_token_generated.js"></script>
+        <script>
+            mapboxgl.accessToken =
+                "pk.eyJ1IjoiZ3dpZGF6IiwiYSI6ImNrcnlrcTlvcDExMTgydm5xZG8zdGpmZHIifQ.PzPoSk74eXEKlBfOqLWR8A";
+
+            let mapData = [];
+            const shapes = ['invTriangle', 'triangle', 'star', 'square', 'diamond', 'circle']
+            const shapeColors = ['#F46036', '#2E294E', '#1B998B', '#C5D86D', '#E8E5DA', '#9EB7E5']
+            fetch(
+                "https://docs.mapbox.com/mapbox-gl-js/assets/earthquakes.geojson"
+            )
+                .then((res) => res.json())
+                .then((data) => {
+                    delete data.crs;
+                    data.features.forEach((d) => {
+                      const rand = Math.floor(Math.random() * (5 - 0) + 0);
+
+                        d.properties = {
+                            shape: shapes[rand],
+                            shapeColor: shapeColors[rand],
+                            color: '#fbb03b'
+                        };
+                    });
+
+                    mapData = data;
+                    console.log(mapData);
+
+                    const beforeMap = new mapboxgl.Map({
+                        container: "map",
+                        // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+                        style: "mapbox://styles/gwidaz/ckrypny5n6j7317pl9pq29vdk",
+                        projection: "mercator",
+                        center: [-122.4787993, 37.7577607],
+                        zoom: 0,
+                    });
+
+                    beforeMap.on("load", function () {
+                        // Add the vector tileset as a source.
+                        beforeMap.addSource("ethnicity", {
+                            type: "geojson",
+                            data: mapData,
+                        });
+                        beforeMap.addLayer({
+                            id: "population",
+                            type: "circle",
+                            source: "ethnicity",
+                            paint: {
+                                "circle-radius": 10,
+                                'circle-color': ['get', 'color'],
+                                "circle-stroke-width": 1,
+                                "circle-stroke-color": "#fff",
+                            },
+                        });
+                    });
+                });
+        </script>
+    </body>
+</html>
